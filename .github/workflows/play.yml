@@ -1,4 +1,4 @@
-name: Construir versión Google Play (AAB)
+name: Construir APK de prueba (instalable en el teléfono)
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ permissions:
   contents: write
 
 jobs:
-  play:
+  apk:
     runs-on: ubuntu-24.04
     env:
       PLAY_KEYSTORE_BASE64: ${{ secrets.PLAY_KEYSTORE_BASE64 }}
@@ -19,18 +19,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verificar los secretos de la llave de Play
+      - name: Verificar los secretos de la llave
         run: |
           for v in PLAY_KEYSTORE_BASE64 PLAY_KEYSTORE_PASSWORD PLAY_KEY_ALIAS PLAY_KEY_PASSWORD; do
-            if [ -z "${!v}" ]; then echo "FALTA el secreto $v (Settings > Secrets and variables > Actions > Secrets). Los valores están en SECRETOS-GITHUB-PLAY.txt"; exit 1; fi
+            if [ -z "${!v}" ]; then echo "FALTA el secreto $v (Settings > Secrets and variables > Actions > Secrets)"; exit 1; fi
           done
 
-      - name: Descomprimir el proyecto
+      - name: Descomprimir el proyecto (el zip más reciente)
         run: |
           ZIP=$(for f in E-Player-Play*.zip; do echo "$(git log -1 --format=%ct -- "$f")|$f"; done | sort -t'|' -k1,1n | tail -1 | cut -d'|' -f2-)
           echo "Usando: $ZIP"
           unzip -q "$ZIP" -d proyecto
-          grep -q "productFlavors" proyecto/android/app/build.gradle || { echo "Este zip es anterior a la versión Play (v8). Sube E-Player-Play-v1.zip."; exit 1; }
+          grep -q "productFlavors" proyecto/android/app/build.gradle || { echo "Este zip es anterior a la versión Play (v8)."; exit 1; }
 
       - uses: actions/setup-node@v4
         with:
@@ -65,23 +65,23 @@ jobs:
           cp -r proyecto/web/public/. proyecto/android/app/src/main/assets/
           rm -f proyecto/android/app/src/main/assets/sw.js
 
-      - name: Compilar el AAB firmado para Google Play
+      - name: Compilar el APK (firmado con tu llave de subida, igual que el de Play)
         working-directory: proyecto/android
         run: |
           echo "$PLAY_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
           export PLAY_KEYSTORE_FILE="$RUNNER_TEMP/upload.jks"
           VC=$((GITHUB_RUN_NUMBER + 100))
-          echo "VERSION_CODE=$VC" >> "$GITHUB_ENV"
-          gradle bundlePlayRelease --no-daemon -PvCode=$VC
+          gradle assemblePlayRelease --no-daemon -PvCode=$VC
           rm -f "$RUNNER_TEMP/upload.jks"
 
-      - name: Preparar el AAB
-        run: cp proyecto/android/app/build/outputs/bundle/playRelease/app-play-release.aab E-Player-play.aab
+      - name: Preparar el APK
+        run: cp proyecto/android/app/build/outputs/apk/play/release/app-play-release.apk E-Player-prueba.apk
 
-      - name: Guardar el AAB en Releases (privado)
+      - name: Publicar el APK de prueba en Releases
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: play-${{ github.run_number }}
-          name: E-Player Google Play ${{ github.run_number }} (versionCode ${{ env.VERSION_CODE }})
-          files: E-Player-play.aab
+          tag_name: apk-${{ github.run_number }}
+          name: E-Player APK de prueba ${{ github.run_number }}
+          prerelease: true
           make_latest: false
+          files: E-Player-prueba.apk
