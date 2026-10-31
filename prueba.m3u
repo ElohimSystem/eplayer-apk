@@ -1,0 +1,9 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="demo1" tvg-name="Demo Apple HLS" group-title="Demo",Demo Apple HLS (bipbop)
+https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8
+#EXTINF:-1 tvg-id="demo2" tvg-name="Demo Big Buck Bunny" group-title="Demo",Demo Big Buck Bunny
+https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
+#EXTINF:-1 tvg-id="demo3" tvg-name="Demo Sintel" group-title="Demo",Demo Sintel
+https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8
+#EXTINF:-1 tvg-id="demo4" tvg-name="Demo Tears of Steel" group-title="Demo",Demo Tears of Steel
+https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8
