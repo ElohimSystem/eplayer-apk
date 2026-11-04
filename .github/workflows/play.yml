@@ -32,6 +32,18 @@ jobs:
           unzip -q "$ZIP" -d proyecto
           grep -q "productFlavors" proyecto/android/app/build.gradle || { echo "Este zip es anterior a la versión Play (v8)."; exit 1; }
 
+      # NUEVO: el .aar de FFmpeg vive en la raíz del repo (android/app/libs/) y el proyecto se compila desde proyecto/android.
+      - name: Añadir FFmpeg (decodificador de audio por software de Media3)
+        run: |
+          if ls android/app/libs/*.aar > /dev/null 2>&1; then
+            mkdir -p proyecto/android/app/libs
+            cp android/app/libs/* proyecto/android/app/libs/
+            echo "FFmpeg añadido al proyecto:"
+            ls -la proyecto/android/app/libs
+          else
+            echo "::warning::No hay .aar en android/app/libs/ del repositorio: el APK saldrá SIN FFmpeg."
+          fi
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -73,6 +85,18 @@ jobs:
           VC=$((GITHUB_RUN_NUMBER + 100))
           gradle assemblePlayRelease --no-daemon -PvCode=$VC
           rm -f "$RUNNER_TEMP/upload.jks"
+
+      # NUEVO: comprobar que FFmpeg realmente quedó dentro del APK (si no, no tiene sentido instalarlo para esta prueba).
+      - name: Verificar que el APK incluye FFmpeg
+        run: |
+          APK=proyecto/android/app/build/outputs/apk/play/release/app-play-release.apk
+          if unzip -l "$APK" | grep -q 'libffmpegJNI\.so'; then
+            echo "OK: el APK incluye FFmpeg:"
+            unzip -l "$APK" | grep 'libffmpegJNI\.so'
+          else
+            echo "::error::El APK NO incluye libffmpegJNI.so (FFmpeg). Revisa que android/app/libs/media3-decoder-ffmpeg.aar exista en el repositorio."
+            exit 1
+          fi
 
       - name: Preparar el APK
         run: cp proyecto/android/app/build/outputs/apk/play/release/app-play-release.apk E-Player-prueba.apk
