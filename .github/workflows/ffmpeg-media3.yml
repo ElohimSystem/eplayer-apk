@@ -48,8 +48,15 @@ jobs:
       - name: Descargar Media3 y FFmpeg
         run: |
           git clone --depth 1 --branch "${MEDIA3_TAG}" https://github.com/androidx/media.git media
-          git clone --depth 1 --branch "${FFMPEG_BRANCH}" https://git.ffmpeg.org/ffmpeg.git \
-            media/libraries/decoder_ffmpeg/src/main/jni/ffmpeg
+          # FFmpeg: espejo oficial en GitHub (git.ffmpeg.org falla con frecuencia desde los servidores de Actions).
+          # Hasta 3 intentos por si hay un corte momentáneo.
+          for i in 1 2 3; do
+            rm -rf media/libraries/decoder_ffmpeg/src/main/jni/ffmpeg
+            git clone --depth 1 --branch "${FFMPEG_BRANCH}" https://github.com/FFmpeg/FFmpeg.git \
+              media/libraries/decoder_ffmpeg/src/main/jni/ffmpeg && break
+            echo "Intento $i falló; reintentando..."; sleep 15
+            [ "$i" = 3 ] && { echo "::error::No se pudo descargar FFmpeg"; exit 1; }
+          done
 
       - name: Comprobar que FFmpeg se compila SIN GPL
         working-directory: media/libraries/decoder_ffmpeg/src/main/jni
